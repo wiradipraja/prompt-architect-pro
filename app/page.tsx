@@ -9,31 +9,31 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Image as ImageIcon, Video as VideoIcon, PenSquare, Camera, Palette, Bot, Copy, Check, Sparkles, Sun, Film, Wind, Smile, User, Shirt } from "lucide-react";
 
-// Hook untuk mencegah error hydration pada render awal
-const useHydrationFix = () => {
-  const [hydrated, setHydrated] = useState(false);
+// Hook kecil untuk memastikan client sudah siap sebelum render konten dinamis
+const useIsClient = () => {
+  const [isClient, setIsClient] = useState(false);
   useEffect(() => {
-    setHydrated(true);
+    setIsClient(true);
   }, []);
-  return hydrated;
+  return isClient;
 };
 
 export default function ArchitectPro() {
-  const isHydrated = useHydrationFix();
+  const isClient = useIsClient(); // Gunakan hook
 
   const [activeTab, setActiveTab] = useState("image");
 
   // State Umum
   const [subject, setSubject] = useState("berdiri di atas tebing menghadap lautan badai");
-  const [style, setStyle] = useState("Photography"); // <- Default Style baru
+  const [style, setStyle] = useState("Photography");
   const [angle, setAngle] = useState("Low Angle Shot");
   const [negativePrompt, setNegativePrompt] = useState("buram, kualitas rendah, kartun, teks, watermark");
 
-  // === STATE BARU UNTUK DESKRIPSI KARAKTER ===
+  // State Deskripsi Karakter
   const [characterDetails, setCharacterDetails] = useState("seorang ksatria kesepian");
-  const [facialDescription, setFacialDescription] = useState(""); // Default kosong
+  const [facialDescription, setFacialDescription] = useState("");
   const [ageRange, setAgeRange] = useState("Dewasa Muda");
-  const [outfit, setOutfit] = useState(""); // Default kosong
+  const [outfit, setOutfit] = useState("");
   const [expression, setExpression] = useState("Netral");
 
   // State Khusus Gambar
@@ -50,21 +50,8 @@ export default function ArchitectPro() {
   const [copyButtonText, setCopyButtonText] = useState("Salin");
 
   const handleGenerate = () => {
-    // Merakit prompt dengan cerdas, mengabaikan field yang kosong
-    const characterParts = [
-      characterDetails,
-      facialDescription, // Baru
-      ageRange,         // Baru
-      expression,       // Baru
-      outfit,           // Baru
-    ].filter(Boolean);
-
-    const basePromptParts = [
-      characterParts.join(', '),
-      subject,
-      style,
-      angle,
-    ].filter(Boolean);
+    const characterParts = [characterDetails, facialDescription, ageRange, expression, outfit].filter(Boolean);
+    const basePromptParts = [characterParts.join(', '), subject, style, angle].filter(Boolean);
 
     let finalPrompt = "";
     
@@ -77,11 +64,9 @@ export default function ArchitectPro() {
       const visualParts = [...basePromptParts, ...videoSpecificParts];
       const visualPrompt = visualParts.join(', ');
       
-      if (dialogue) {
-        finalPrompt = `VIDEO: ${visualPrompt} --no ${negativePrompt} | DIALOG: "${dialogue}"`;
-      } else {
-        finalPrompt = `VIDEO: ${visualPrompt} --no ${negativePrompt}`;
-      }
+      finalPrompt = dialogue 
+        ? `VIDEO: ${visualPrompt} --no ${negativePrompt} | DIALOG: "${dialogue}"`
+        : `VIDEO: ${visualPrompt} --no ${negativePrompt}`;
     }
     setGeneratedPrompt(finalPrompt);
     setCopyButtonText("Salin");
@@ -94,20 +79,19 @@ export default function ArchitectPro() {
     setTimeout(() => { setCopyButtonText("Salin"); }, 2000);
   };
 
-  if (!isHydrated) {
-    return <div className="min-h-screen bg-gray-900"></div>; // Tampilkan background kosong saat server render
+  // Selama server-side rendering atau sebelum client siap, tampilkan UI yang aman dan tidak crash
+  if (!isClient) {
+    return (
+      <main className="min-h-screen p-4 md:p-10 flex flex-col items-center">
+         <div className="w-full max-w-6xl">
+            <div className="text-center mb-10">
+              <h1 className="text-5xl font-bold tracking-tight">Prompt Architect Pro</h1>
+              <p className="text-xl text-muted-foreground mt-2">Bangun Prompt Sempurna untuk Gambar dan Video Anda</p>
+            </div>
+         </div>
+      </main>
+    );
   }
-
-  // Bagian JSX untuk input karakter (agar tidak duplikasi terlalu banyak)
-  const CharacterInputs = () => (
-    <>
-      <div><Label htmlFor={`subject-${activeTab}`} className="text-lg font-semibold flex items-center gap-2 mb-2"><PenSquare className="w-5 h-5" /> Subjek & Aksi Utama</Label><Textarea id={`subject-${activeTab}`} value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Apa inti dari adegan ini?" className="h-28" /></div>
-      <div><Label htmlFor={`character-${activeTab}`} className="text-lg font-semibold flex items-center gap-2 mb-2"><Bot className="w-5 h-5" /> Deskripsi Inti Karakter</Label><Textarea id={`character-${activeTab}`} value={characterDetails} onChange={(e) => setCharacterDetails(e.target.value)} placeholder="Jelaskan karakter secara umum..." className="h-24" /></div>
-      <div><Label className="text-lg font-semibold flex items-center gap-2 mb-2"><User className="w-5 h-5" /> Etnis & Wajah</Label><Select value={facialDescription} onValueChange={setFacialDescription}><SelectTrigger><SelectValue placeholder="Pilih etnis... (opsional)" /></SelectTrigger><SelectContent><SelectItem value="">Tidak ada yang dipilih</SelectItem><SelectItem value="Arabian">Arabian</SelectItem><SelectItem value="Asian (East)">Asian (Timur)</SelectItem><SelectItem value="Asian (South)">Asian (Selatan)</SelectItem><SelectItem value="African">African</SelectItem><SelectItem value="Caucasian">Caucasian</SelectItem><SelectItem value="Hispanic/Latino">Hispanic/Latino</SelectItem><SelectItem value="Native American">Native American</SelectItem></SelectContent></Select></div>
-      <div><Label className="text-lg font-semibold flex items-center gap-2 mb-2"><Smile className="w-5 h-5" /> Ekspresi & Usia</Label><div className="flex gap-4"><Select value={expression} onValueChange={setExpression}><SelectTrigger><SelectValue placeholder="Pilih ekspresi..." /></SelectTrigger><SelectContent><SelectItem value="Netral">Netral</SelectItem><SelectItem value="Senyum bahagia">Senyum bahagia</SelectItem><SelectItem value="Tertawa">Tertawa</SelectItem><SelectItem value="Sedih, menangis">Sedih, menangis</SelectItem><SelectItem value="Marah, berteriak">Marah, berteriak</SelectItem><SelectItem value="Terkejut">Terkejut</SelectItem><SelectItem value="Fokus, serius">Fokus, serius</SelectItem></SelectContent></Select><Select value={ageRange} onValueChange={setAgeRange}><SelectTrigger><SelectValue placeholder="Pilih usia..." /></SelectTrigger><SelectContent><SelectItem value="Bayi">Bayi</SelectItem><SelectItem value="Anak-anak">Anak-anak</SelectItem><SelectItem value="Remaja">Remaja</SelectItem><SelectItem value="Dewasa Muda">Dewasa Muda</SelectItem><SelectItem value="Dewasa">Dewasa</SelectItem><SelectItem value="Paruh Baya">Paruh Baya</SelectItem><SelectItem value="Lansia">Lansia</SelectItem></SelectContent></Select></div></div>
-      <div><Label className="text-lg font-semibold flex items-center gap-2 mb-2"><Shirt className="w-5 h-5" /> Pakaian (Outfit)</Label><Select value={outfit} onValueChange={setOutfit}><SelectTrigger><SelectValue placeholder="Pilih pakaian... (opsional)" /></SelectTrigger><SelectContent><SelectItem value="">Tidak ada yang dipilih</SelectItem><SelectItem value="Pakaian formal, jas, gaun">Pakaian Formal</SelectItem><SelectItem value="Pakaian kasual, t-shirt, jeans">Pakaian Kasual</SelectItem><SelectItem value="Pakaian olahraga">Pakaian Olahraga</SelectItem><SelectItem value="Pakaian seksi, lingerie">Pakaian Seksi</SelectItem><SelectItem value="Baju zirah abad pertengahan">Baju Zirah</SelectItem><SelectItem value="Pakaian fiksi ilmiah, futuristik">Pakaian Fiksi Ilmiah</SelectItem><SelectItem value="Pakaian vintage, retro">Pakaian Vintage</SelectItem><SelectItem value="Pakaian gotik, punk">Pakaian Gotik</SelectItem></SelectContent></Select></div>
-    </>
-  );
 
   return (
     <main className="min-h-screen p-4 md:p-10 flex flex-col items-center">
@@ -124,10 +108,18 @@ export default function ArchitectPro() {
           </TabsList>
 
           <div className="bg-card mt-6 p-8 rounded-2xl border">
-            {/* KONTEN TAB GAMBAR */}
+            {/* KONTEN TAB GAMBAR (Ditulis Langsung) */}
             <TabsContent value="image" className="mt-0">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-                <div className="space-y-6"><CharacterInputs /></div>
+                {/* Kolom Kiri Gambar */}
+                <div className="space-y-6">
+                   <div><Label htmlFor="subject-img" className="text-lg font-semibold flex items-center gap-2 mb-2"><PenSquare className="w-5 h-5" /> Subjek & Aksi Utama</Label><Textarea id="subject-img" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Apa inti dari adegan ini?" className="h-28" /></div>
+                   <div><Label htmlFor="character-img" className="text-lg font-semibold flex items-center gap-2 mb-2"><Bot className="w-5 h-5" /> Deskripsi Inti Karakter</Label><Textarea id="character-img" value={characterDetails} onChange={(e) => setCharacterDetails(e.target.value)} placeholder="Jelaskan karakter secara umum..." className="h-24" /></div>
+                   <div><Label className="text-lg font-semibold flex items-center gap-2 mb-2"><User className="w-5 h-5" /> Etnis & Wajah</Label><Select value={facialDescription} onValueChange={setFacialDescription}><SelectTrigger><SelectValue placeholder="Pilih etnis... (opsional)" /></SelectTrigger><SelectContent><SelectItem value="">Tidak ada</SelectItem><SelectItem value="Arabian">Arabian</SelectItem><SelectItem value="Asian (East)">Asian (Timur)</SelectItem><SelectItem value="Asian (South)">Asian (Selatan)</SelectItem><SelectItem value="African">African</SelectItem><SelectItem value="Caucasian">Caucasian</SelectItem><SelectItem value="Hispanic/Latino">Hispanic/Latino</SelectItem><SelectItem value="Native American">Native American</SelectItem></SelectContent></Select></div>
+                   <div><Label className="text-lg font-semibold flex items-center gap-2 mb-2"><Smile className="w-5 h-5" /> Ekspresi & Usia</Label><div className="flex gap-4"><Select value={expression} onValueChange={setExpression}><SelectTrigger><SelectValue placeholder="Pilih ekspresi..." /></SelectTrigger><SelectContent><SelectItem value="Netral">Netral</SelectItem><SelectItem value="Senyum bahagia">Senyum</SelectItem><SelectItem value="Tertawa">Tertawa</SelectItem><SelectItem value="Sedih, menangis">Sedih</SelectItem><SelectItem value="Marah, berteriak">Marah</SelectItem><SelectItem value="Terkejut">Terkejut</SelectItem><SelectItem value="Fokus, serius">Serius</SelectItem></SelectContent></Select><Select value={ageRange} onValueChange={setAgeRange}><SelectTrigger><SelectValue placeholder="Pilih usia..." /></SelectTrigger><SelectContent><SelectItem value="Bayi">Bayi</SelectItem><SelectItem value="Anak-anak">Anak-anak</SelectItem><SelectItem value="Remaja">Remaja</SelectItem><SelectItem value="Dewasa Muda">Dewasa Muda</SelectItem><SelectItem value="Dewasa">Dewasa</SelectItem><SelectItem value="Paruh Baya">Paruh Baya</SelectItem><SelectItem value="Lansia">Lansia</SelectItem></SelectContent></Select></div></div>
+                   <div><Label className="text-lg font-semibold flex items-center gap-2 mb-2"><Shirt className="w-5 h-5" /> Pakaian</Label><Select value={outfit} onValueChange={setOutfit}><SelectTrigger><SelectValue placeholder="Pilih pakaian... (opsional)" /></SelectTrigger><SelectContent><SelectItem value="">Tidak ada</SelectItem><SelectItem value="Pakaian formal">Formal</SelectItem><SelectItem value="Pakaian kasual">Kasual</SelectItem><SelectItem value="Pakaian olahraga">Olahraga</SelectItem><SelectItem value="Pakaian seksi">Seksi</SelectItem><SelectItem value="Baju zirah">Zirah</SelectItem><SelectItem value="Pakaian fiksi ilmiah">Fiksi Ilmiah</SelectItem><SelectItem value="Pakaian vintage">Vintage</SelectItem><SelectItem value="Pakaian gotik">Gotik</SelectItem></SelectContent></Select></div>
+                </div>
+                {/* Kolom Kanan Gambar */}
                 <div className="space-y-6">
                   <div><Label className="text-lg font-semibold flex items-center gap-2 mb-2"><Palette className="w-5 h-5" /> Style</Label><Select value={style} onValueChange={setStyle}><SelectTrigger><SelectValue placeholder="Pilih style..." /></SelectTrigger><SelectContent><SelectItem value="Photography">Photography</SelectItem><SelectItem value="Fotorealistic">Fotorealistic</SelectItem><SelectItem value="Teal & Orange">Teal & Orange</SelectItem><SelectItem value="Cartoon C4D">Cartoon C4D</SelectItem><SelectItem value="Ghibli">Ghibli</SelectItem><SelectItem value="Japanese Anime">Japanese Anime</SelectItem><SelectItem value="Glass">Glass</SelectItem><SelectItem value="Retro film">Retro film</SelectItem><SelectItem value="3d polaroid">3D Polaroid</SelectItem><SelectItem value="Steampunk">Steampunk</SelectItem><SelectItem value="Future sci-fi">Future Sci-fi</SelectItem><SelectItem value="Chibi 3D">Chibi 3D</SelectItem></SelectContent></Select></div>
                   <div><Label className="text-lg font-semibold flex items-center gap-2 mb-2"><Camera className="w-5 h-5" /> Sudut Kamera</Label><Select value={angle} onValueChange={setAngle}><SelectTrigger><SelectValue placeholder="Pilih sudut..." /></SelectTrigger><SelectContent><SelectItem value="Eye-Level Shot">Eye-Level</SelectItem><SelectItem value="Low Angle Shot">Low Angle</SelectItem><SelectItem value="High Angle Shot">High Angle</SelectItem><SelectItem value="POV">POV</SelectItem><SelectItem value="Selfie Shot">Selfie</SelectItem><SelectItem value="Dutch Angle">Dutch Angle</SelectItem><SelectItem value="Top-down View">Top-down</SelectItem></SelectContent></Select></div>
@@ -138,10 +130,18 @@ export default function ArchitectPro() {
               </div>
             </TabsContent>
 
-            {/* KONTEN TAB VIDEO */}
+            {/* KONTEN TAB VIDEO (Ditulis Langsung) */}
             <TabsContent value="video" className="mt-0">
                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-                <div className="space-y-6"><CharacterInputs /></div>
+                {/* Kolom Kiri Video */}
+                <div className="space-y-6">
+                   <div><Label htmlFor="subject-vid" className="text-lg font-semibold flex items-center gap-2 mb-2"><PenSquare className="w-5 h-5" /> Subjek & Aksi Utama</Label><Textarea id="subject-vid" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Apa inti dari adegan ini?" className="h-28" /></div>
+                   <div><Label htmlFor="character-vid" className="text-lg font-semibold flex items-center gap-2 mb-2"><Bot className="w-5 h-5" /> Deskripsi Inti Karakter</Label><Textarea id="character-vid" value={characterDetails} onChange={(e) => setCharacterDetails(e.target.value)} placeholder="Jelaskan karakter secara umum..." className="h-24" /></div>
+                   <div><Label className="text-lg font-semibold flex items-center gap-2 mb-2"><User className="w-5 h-5" /> Etnis & Wajah</Label><Select value={facialDescription} onValueChange={setFacialDescription}><SelectTrigger><SelectValue placeholder="Pilih etnis... (opsional)" /></SelectTrigger><SelectContent><SelectItem value="">Tidak ada</SelectItem><SelectItem value="Arabian">Arabian</SelectItem><SelectItem value="Asian (East)">Asian (Timur)</SelectItem><SelectItem value="Asian (South)">Asian (Selatan)</SelectItem><SelectItem value="African">African</SelectItem><SelectItem value="Caucasian">Caucasian</SelectItem><SelectItem value="Hispanic/Latino">Hispanic/Latino</SelectItem><SelectItem value="Native American">Native American</SelectItem></SelectContent></Select></div>
+                   <div><Label className="text-lg font-semibold flex items-center gap-2 mb-2"><Smile className="w-5 h-5" /> Ekspresi & Usia</Label><div className="flex gap-4"><Select value={expression} onValueChange={setExpression}><SelectTrigger><SelectValue placeholder="Pilih ekspresi..." /></SelectTrigger><SelectContent><SelectItem value="Netral">Netral</SelectItem><SelectItem value="Senyum bahagia">Senyum</SelectItem><SelectItem value="Tertawa">Tertawa</SelectItem><SelectItem value="Sedih, menangis">Sedih</SelectItem><SelectItem value="Marah, berteriak">Marah</SelectItem><SelectItem value="Terkejut">Terkejut</SelectItem><SelectItem value="Fokus, serius">Serius</SelectItem></SelectContent></Select><Select value={ageRange} onValueChange={setAgeRange}><SelectTrigger><SelectValue placeholder="Pilih usia..." /></SelectTrigger><SelectContent><SelectItem value="Bayi">Bayi</SelectItem><SelectItem value="Anak-anak">Anak-anak</SelectItem><SelectItem value="Remaja">Remaja</SelectItem><SelectItem value="Dewasa Muda">Dewasa Muda</SelectItem><SelectItem value="Dewasa">Dewasa</SelectItem><SelectItem value="Paruh Baya">Paruh Baya</SelectItem><SelectItem value="Lansia">Lansia</SelectItem></SelectContent></Select></div></div>
+                   <div><Label className="text-lg font-semibold flex items-center gap-2 mb-2"><Shirt className="w-5 h-5" /> Pakaian</Label><Select value={outfit} onValueChange={setOutfit}><SelectTrigger><SelectValue placeholder="Pilih pakaian... (opsional)" /></SelectTrigger><SelectContent><SelectItem value="">Tidak ada</SelectItem><SelectItem value="Pakaian formal">Formal</SelectItem><SelectItem value="Pakaian kasual">Kasual</SelectItem><SelectItem value="Pakaian olahraga">Olahraga</SelectItem><SelectItem value="Pakaian seksi">Seksi</SelectItem><SelectItem value="Baju zirah">Zirah</SelectItem><SelectItem value="Pakaian fiksi ilmiah">Fiksi Ilmiah</SelectItem><SelectItem value="Pakaian vintage">Vintage</SelectItem><SelectItem value="Pakaian gotik">Gotik</SelectItem></SelectContent></Select></div>
+                </div>
+                {/* Kolom Kanan Video */}
                 <div className="space-y-6">
                   <div><Label className="text-lg font-semibold flex items-center gap-2 mb-2"><Palette className="w-5 h-5" /> Style</Label><Select value={style} onValueChange={setStyle}><SelectTrigger><SelectValue placeholder="Pilih style..." /></SelectTrigger><SelectContent><SelectItem value="Photography">Photography</SelectItem><SelectItem value="Fotorealistic">Fotorealistic</SelectItem><SelectItem value="Teal & Orange">Teal & Orange</SelectItem><SelectItem value="Cartoon C4D">Cartoon C4D</SelectItem><SelectItem value="Ghibli">Ghibli</SelectItem><SelectItem value="Japanese Anime">Japanese Anime</SelectItem><SelectItem value="Glass">Glass</SelectItem><SelectItem value="Retro film">Retro film</SelectItem><SelectItem value="3d polaroid">3D Polaroid</SelectItem><SelectItem value="Steampunk">Steampunk</SelectItem><SelectItem value="Future sci-fi">Future Sci-fi</SelectItem><SelectItem value="Chibi 3D">Chibi 3D</SelectItem></SelectContent></Select></div>
                   <div><Label className="text-lg font-semibold flex items-center gap-2 mb-2"><Camera className="w-5 h-5" /> Sudut Kamera</Label><Select value={angle} onValueChange={setAngle}><SelectTrigger><SelectValue placeholder="Pilih sudut..." /></SelectTrigger><SelectContent><SelectItem value="Eye-Level Shot">Eye-Level</SelectItem><SelectItem value="Low Angle Shot">Low Angle</SelectItem><SelectItem value="High Angle Shot">High Angle</SelectItem><SelectItem value="POV">POV</SelectItem><SelectItem value="Selfie Shot">Selfie</SelectItem><SelectItem value="Dutch Angle">Dutch Angle</SelectItem><SelectItem value="Top-down View">Top-down</SelectItem></SelectContent></Select></div>
