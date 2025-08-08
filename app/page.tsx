@@ -7,8 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-// Impor ikon-ikon baru
-import { Image as ImageIcon, Video as VideoIcon, PenSquare, Camera, Palette, Bot, Copy, Check, Sparkles, Sun, Film, Wind, Smile, User, Shirt, Upload } from "lucide-react";
+// Impor ikon yang benar (tanpa Upload)
+import { Image as ImageIcon, Video as VideoIcon, PenSquare, Camera, Palette, Bot, Copy, Check, Sparkles, Sun, Film, Wind, Smile, User, Shirt } from "lucide-react";
 
 export default function ArchitectPro() {
   const [activeTab, setActiveTab] = useState("image");
@@ -23,7 +23,7 @@ export default function ArchitectPro() {
   // State Deskripsi Karakter
   const [characterDetails, setCharacterDetails] = useState("seorang ksatria kesepian");
   const [facialDescription, setFacialDescription] = useState(""); // Default kosong = tidak dipilih
-  const [ageRange, setAgeRange] = useState("Dewasa Muda (20-30)");
+  const [ageRange, setAgeRange] = useState("Dewasa Muda");
   const [outfit, setOutfit] = useState(""); // Default kosong = tidak dipilih
   const [expression, setExpression] = useState("Netral");
 
@@ -48,23 +48,25 @@ export default function ArchitectPro() {
       ageRange,
       expression,
       outfit,
-    ].filter(part => part); // .filter(part => part) akan menghapus string kosong
+    ].filter(Boolean); // .filter(Boolean) adalah cara singkat untuk menghapus string kosong, null, atau undefined
 
-    const basePrompt = [
+    const basePromptParts = [
       characterParts.join(', '),
       subject,
       style,
-      angle
-    ].filter(part => part).join(', ');
+      angle,
+    ].filter(Boolean);
 
     let finalPrompt = "";
     
     if (activeTab === 'image') {
       const imageSpecificParts = [lighting, detailLevel];
-      finalPrompt = [basePrompt, ...imageSpecificParts, `--no ${negativePrompt}`].filter(part => part).join(', ');
+      const allParts = [...basePromptParts, ...imageSpecificParts];
+      finalPrompt = `${allParts.join(', ')} --no ${negativePrompt}`;
     } else { // untuk video
       const videoSpecificParts = [motion, filmQuality];
-      const visualPrompt = [basePrompt, ...videoSpecificParts].filter(part => part).join(', ');
+      const visualParts = [...basePromptParts, ...videoSpecificParts];
+      const visualPrompt = visualParts.join(', ');
       
       if (dialogue) {
         finalPrompt = `VIDEO: ${visualPrompt} --no ${negativePrompt} | DIALOG: "${dialogue}"`;
@@ -96,10 +98,9 @@ export default function ArchitectPro() {
           <Label htmlFor="character" className="text-lg font-semibold flex items-center gap-2 mb-2"><Bot className="w-5 h-5" /> Deskripsi Inti Karakter</Label>
           <Textarea id="character" value={characterDetails} onChange={(e) => setCharacterDetails(e.target.value)} placeholder="Jelaskan karakter secara umum..." className="h-24" />
         </div>
-        {/* === FIELD KARAKTER BARU === */}
         <div>
           <Label className="text-lg font-semibold flex items-center gap-2 mb-2"><User className="w-5 h-5" /> Etnis & Wajah</Label>
-          <Select value={facialDescription} onValueChange={setFacialDescription}><SelectTrigger><SelectValue placeholder="Pilih etnis..." /></SelectTrigger>
+          <Select value={facialDescription} onValueChange={setFacialDescription}><SelectTrigger><SelectValue placeholder="Pilih etnis... (opsional)" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="">Tidak ada yang dipilih</SelectItem>
               <SelectItem value="Arabian">Arabian</SelectItem>
@@ -141,7 +142,7 @@ export default function ArchitectPro() {
         </div>
         <div>
           <Label className="text-lg font-semibold flex items-center gap-2 mb-2"><Shirt className="w-5 h-5" /> Pakaian (Outfit)</Label>
-          <Select value={outfit} onValueChange={setOutfit}><SelectTrigger><SelectValue placeholder="Pilih pakaian..." /></SelectTrigger>
+          <Select value={outfit} onValueChange={setOutfit}><SelectTrigger><SelectValue placeholder="Pilih pakaian... (opsional)" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="">Tidak ada yang dipilih</SelectItem>
               <SelectItem value="Pakaian formal, jas, gaun">Pakaian Formal (Jas, Gaun)</SelectItem>
@@ -159,9 +160,6 @@ export default function ArchitectPro() {
       
       {/* Kolom Kanan: Pengaturan Teknis */}
       <div className="space-y-6">
-        {/* ... (Konten kolom kanan yang sudah ada + tambahan baru) ... */}
-        {/* ... (Gaya & Mood, Sudut Kamera) ... */}
-        {/* ... (Render kondisional untuk Gambar & Video) ... */}
          <div>
           <Label className="text-lg font-semibold flex items-center gap-2 mb-2"><Palette className="w-5 h-5" /> Gaya & Mood</Label>
           <Select value={style} onValueChange={setStyle}><SelectTrigger><SelectValue placeholder="Pilih gaya..." /></SelectTrigger>
@@ -243,7 +241,7 @@ export default function ArchitectPro() {
             </div>
             <div>
               <Label htmlFor="dialogue" className="text-lg font-semibold flex items-center gap-2 mb-2"><VideoIcon className="w-5 h-5 text-blue-400" /> Naskah Dialog</Label>
-              <Textarea id="dialogue" value={dialogue} onChange={(e) => setDialogue(e.target.value)} placeholder="Tuliskan dialog yang akan diucapkan..." className="h-24" />
+              <Textarea id="dialogue" value={dialogue} onChange={(e) => setDialogue(e.target.value)} placeholder="Tuliskan dialog... (opsional)" className="h-24" />
             </div>
           </>
         )}
